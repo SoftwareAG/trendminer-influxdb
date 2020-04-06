@@ -1,0 +1,33 @@
+server:
+  port: 10027
+  servlet:
+    context-path: /api/
+
+spring:
+  datasource:
+    driverClassName: org.postgresql.Driver
+    platform: postgres
+    url: ${CONF_DB_URL:jdbc:postgresql://localhost:5432/tm_influx}
+    username: ${CONF_DB_USERNAME:tm_user}
+    password: ${CONF_DB_PASSWORD:tm_password}
+    hikari:
+      maximum-pool-size: 2
+      minimum-idle: 2
+
+  jpa:
+    open-in-view: false
+    generate-ddl: true
+    properties:
+      hibernate:
+        ddl-auto: update
+        jdbc:
+          lob:
+            non_contextual_creation: true
+
+  #logging:
+  #  level:
+      #root: ERROR
+      #org.springframework: ERROR
+      # org.springframework.cache: TRACE
+   #   root: TRACE
+   #   file: ./application-debug.log
