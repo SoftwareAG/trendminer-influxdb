@@ -30,28 +30,28 @@ public class TagDetails {
         return id;
     }
 
-    public void setId(long id) {
-        this.id = id;
-    }
-
     public String getName() {
         return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 
     public int getHistorian() {
         return historian;
     }
 
-    public void setHistorian(int historian) {
-        this.historian = historian;
-    }
-
     public TagType getTagType() {
         return tagType;
+    }
+
+    public void setId(long id) {
+        this.id = id;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setHistorian(int historian) {
+        this.historian = historian;
     }
 
     public void setTagType(TagType tagType) {

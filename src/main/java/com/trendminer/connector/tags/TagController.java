@@ -1,33 +1,26 @@
 package com.trendminer.connector.tags;
 
 import com.google.common.base.Strings;
-import com.influxdb.client.InfluxDBClient;
-import com.influxdb.client.InfluxDBClientFactory;
-import com.influxdb.client.QueryApi;
-import com.influxdb.query.FluxRecord;
-import com.influxdb.query.FluxTable;
 import com.trendminer.connector.common.HistorianNotFoundException;
 import com.trendminer.connector.database.Historian;
 import com.trendminer.connector.database.HistorianRepository;
+import com.trendminer.connector.influx.util.UriBuilder;
 import com.trendminer.connector.influx.model.Metric;
+import com.trendminer.connector.influx.model.QueryResult;
 import com.trendminer.connector.tags.model.*;
 import com.trendminer.connector.tags.plotting.PlotService;
 import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.*;
+import java.util.stream.StreamSupport;
 
 import static com.trendminer.connector.tags.model.TagType.ANALOG;
 import static com.trendminer.connector.tags.model.TagType.DISCRETE;
@@ -39,6 +32,8 @@ import static java.util.stream.Collectors.toList;
 public class TagController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TagController.class);
+    private final RestTemplate restTemplate;
+    private final UriBuilder uriBuilder;
     private final PlotService plotService;
     private final TimeSeriesDefinitionsOperation timeSeriesDefinitionsOperation;
     private final HistorianRepository historianRepository;
@@ -46,15 +41,25 @@ public class TagController {
     private final TagService tagService;
 
     @Autowired
-    public TagController(PlotService plotService,
+    public TagController(RestTemplate restTemplate,
+                         UriBuilder uriBuilder,
+                         PlotService plotService,
                          TagService tagService,
                          TimeSeriesDefinitionsOperation timeSeriesDefinitionsOperation,
                          HistorianRepository historianRepository, TagDetailsRepository tagDetailsRepository) {
+        this.restTemplate = restTemplate;
+        this.uriBuilder = uriBuilder;
         this.plotService = plotService;
         this.tagService = tagService;
         this.timeSeriesDefinitionsOperation = timeSeriesDefinitionsOperation;
         this.historianRepository = historianRepository;
         this.tagDetailsRepository = tagDetailsRepository;
+    }
+
+    @ResponseStatus(value = HttpStatus.BAD_REQUEST, reason = "Wrong arguments")
+    @ExceptionHandler(IllegalArgumentException.class)
+    public void conflict() {
+        // Nothing to do
     }
 
     @GetMapping(value = "/v2/tags")
@@ -137,30 +142,20 @@ public class TagController {
                                                        TagType tagType) {
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
-
-        String flux = createPointUri(historian, metric, start, end);
-        InfluxDBClient influxDBClient = InfluxDBClientFactory.create(historian.getDataSource(),
-                historian.getPassword().toCharArray());
-        QueryApi queryApi = influxDBClient.getQueryApi();
-        List<FluxTable> tables = queryApi.query(flux, historian.getPrefix());
-        List<FluxRecord> points = new ArrayList<FluxRecord>();
-        if (tables.size() != 1) {
-            LOGGER.warn("No data found in the specified time interval.");
-        } else  {
-            points = tables.get(0).getRecords();
-        }
-
-        List<DataPoint> dataPoints = points.parallelStream()
+        QueryResult result = fetchPointMaps(historian, metric, start, end);
+        List<List<Object>> points = result.getResults().get(0).getSeries().get(0)
+                .getValues();
+        List<DataPoint> dataPoints = StreamSupport.stream(points.spliterator(), true)
+                .filter(point -> point.size() == 2)
                 .map(point -> createDataPoint(point, tagType))
                 .collect(toList());
-        influxDBClient.close();
 
         List<ConnectorPoint> connectorPoints = plotService.getPlottableData(dataPoints, Instant.parse(start), Instant.parse(end), numberOfIntervals, interpolationType)
                 .stream()
                 .map(dataPoint -> createConnectorPoint(dataPoint, tagType))
                 .collect(toList());
-        stopWatch.stop();
 
+        stopWatch.stop();
         LOGGER.info("Fetching points from {} to {} for {} took {} ms", start, end, metric, stopWatch.getTime());
         return connectorPoints;
     }
@@ -168,44 +163,38 @@ public class TagController {
     private Iterable<ConnectorPoint> fetchStringPoints(Historian historian, Metric metric, String start, String end) {
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
-
-        String flux = createPointUri(historian, metric, start, end);
-        InfluxDBClient influxDBClient = InfluxDBClientFactory.create(historian.getDataSource(),
-                historian.getPassword().toCharArray());
-        QueryApi queryApi = influxDBClient.getQueryApi();
-        List<FluxTable> tables = queryApi.query(flux, historian.getPrefix());
-        if (tables.size() != 1) {
-            LOGGER.error("Number of result tables should be 1 but it is:" + tables.size());
-            throw new IllegalArgumentException();
-        }
-        List<FluxRecord> points = tables.get(0).getRecords();
-        List<ConnectorPoint> connectorPoints = points.parallelStream()
+        QueryResult result  = fetchPointMaps(historian, metric, start, end);
+        List<List<Object>> points = result.getResults().get(0).getSeries().get(0)
+                .getValues();
+        List<ConnectorPoint> connectorPoints = StreamSupport.stream(points.spliterator(), true)
+                .filter(point -> point.size() == 2)
                 .map(this::createDigitalConnectorPoint)
                 .collect(toList());
-        influxDBClient.close();
+
         stopWatch.stop();
         LOGGER.info("Fetching points from {} to {} for {} took {} ms", start, end, metric, stopWatch.getTime());
         return connectorPoints;
     }
 
-    private ConnectorPoint createDigitalConnectorPoint(FluxRecord point) {
-        return new ConnectorPoint((String) point.getValueByKey("_time"), (String) point.getValueByKey("_value"));
+    private QueryResult fetchPointMaps(Historian historian, Metric metric, String start, String end) {
+        String pointUri = createPointUri(historian, metric, start, end);
+        return restTemplate.getForObject(pointUri, QueryResult.class);
+    }
+
+    private ConnectorPoint createDigitalConnectorPoint(List<Object> point) {
+        return new ConnectorPoint((String) point.get(0), (String) point.get(1));
     }
 
     private String createPointUri(Historian historian, Metric metric, String start, String end) {
-        String flux_query = format("from(bucket: \"%s\") " +
-                        "|> range(start: %s, stop: %s) " +
-                        "|> filter(fn: (r) => r._measurement == \"%s\") " +
-                        "|> filter(fn: (r) => r._field == \"%s\") ",
-                historian.getName(),
-                start, end,
-                metric.getMeasurement(), metric.getField().getName());
-
-        String filterClause = metric.getTags().stream()
-                .map(t -> format("|> filter(fn: (r) => r.%s == \"%s\")", t.getName(), t.getValue()))
-                .collect(Collectors.joining(" "));
-
-        return flux_query + filterClause;
+        String whereClause = "";
+        for ( Metric.InfluxTag t: metric.getTags()){
+            whereClause = whereClause + t.getName() + "=" + "'" + t.getValue() + "'";
+            whereClause = whereClause + " AND " +  "time >= '" + start + "' AND  time < '" +end + "'";
+        }
+        return uriBuilder.fromQuery(historian,
+                format("SELECT time,%s FROM %s WHERE %s"
+                    ,metric.getField().getName(),metric.getMeasurement(), whereClause))
+                .build().toUriString();
     }
 
     private ConnectorPoint createConnectorPoint(DataPoint dataPoint, TagType tagType) {
@@ -215,16 +204,16 @@ public class TagController {
 
     private String createPointValue(DataPoint dataPoint, TagType tagType) {
         if (tagType == DISCRETE) {
-            return format(Locale.US, "%d", (int) dataPoint.getValue());
+            return format(Locale.US,"%d", (int) dataPoint.getValue());
         }
-        return format(Locale.US, "%f", dataPoint.getValue());
+        return format(Locale.US,"%f", dataPoint.getValue());
     }
 
-    private DataPoint createDataPoint(FluxRecord point, TagType tagType) {
+    private DataPoint createDataPoint(List<Object> point, TagType tagType) {
         if (tagType == ANALOG) {
-            return new DataPoint((Instant) point.getValueByKey("_time"), (Double) point.getValueByKey("_value"));
+            return new DataPoint(Instant.parse((String) point.get(0)), (Double) point.get(1));
         }
-        return new DataPoint((Instant) point.getValueByKey("_time"), (Integer) point.getValueByKey("_value"));
+        return new DataPoint(Instant.parse((String) point.get(0)), (Integer) point.get(1));
     }
 
     private Historian fetchHistorian(TagDetails tagDetails) {

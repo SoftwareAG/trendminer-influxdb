@@ -1,3 +1,7 @@
+influx:
+  username: influx_user
+  password: influx_password
+
 server:
   port: 10027
   servlet:

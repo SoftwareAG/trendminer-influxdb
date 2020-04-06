@@ -33,36 +33,36 @@ public class TagDetailsDTO {
         return name;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public String getDescription() {
         return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
     }
 
     public int getHistorian() {
         return historian;
     }
 
-    public void setHistorian(int historian) {
-        this.historian = historian;
-    }
-
     public String getUnits() {
         return units;
     }
 
-    public void setUnits(String units) {
-        this.units = units;
-    }
-
     public TagType getType() {
         return type;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public void setHistorian(int historian) {
+        this.historian = historian;
+    }
+
+    public void setUnits(String units) {
+        this.units = units;
     }
 
     public void setType(TagType type) {

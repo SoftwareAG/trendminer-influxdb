@@ -1,15 +1,10 @@
-/**
- * @created 01.02.2020
- * @author ck
- * @copyright Software AG
- */
-
 package com.trendminer.connector.database;
 
 import com.trendminer.connector.common.HistorianNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

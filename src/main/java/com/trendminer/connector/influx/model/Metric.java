@@ -1,10 +1,3 @@
-/**
- * @created 01.02.2020
- * @project Metric.java
- * @author ck
- * @copyright Software AG
- */
-
 package com.trendminer.connector.influx.model;
 
 import com.trendminer.connector.database.Historian;
@@ -16,9 +9,20 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class Metric {
+    public String getMeasurement() {
+        return measurement;
+    }
+
     private String measurement;
+
     private List<InfluxTag> tags;
+
     private InfluxField field;
+
+    public Historian getHistorian() {
+        return historian;
+    }
+
     private Historian historian;
 
     public static Metric createMetricPartial(String unparsed, Historian historian) {
@@ -31,7 +35,7 @@ public class Metric {
             else {
                 String[] tag = tokens[i].split("=");
                 if (tag.length == 2)
-                    that.getTags().add(new InfluxTag(tag[0], tag[1]));
+                    that.getTags().add (new InfluxTag(tag[0], tag[1]));
             }
         }
         that.historian = historian;
@@ -45,24 +49,16 @@ public class Metric {
         for (int i = 0; i < tokens.length; i++) {
             if (i == 0)
                 that.measurement = tokens[0];
-            else if (i == tokens.length - 1) {
+            else if ( i == tokens.length -1) {
                 that.setField(new InfluxField(tokens[i], tagType));
-            } else {
+            } else  {
                 String[] tag = tokens[i].split("=");
                 if (tag.length == 2)
-                    that.getTags().add(new InfluxTag(tag[0], tag[1]));
+                    that.getTags().add (new InfluxTag(tag[0], tag[1]));
             }
         }
         that.historian = historian;
         return that;
-    }
-
-    public String getMeasurement() {
-        return measurement;
-    }
-
-    public Historian getHistorian() {
-        return historian;
     }
 
     @Override
@@ -70,7 +66,7 @@ public class Metric {
         return ReflectionToStringBuilder.toString(this);
     }
 
-    public String getName() {
+    public String getName(){
         return measurement + "," + String.join("", getTags().stream().map(tag -> tag.getName() + "=" + tag.getValue() + ",").collect(Collectors.toList()));
     }
 
@@ -91,12 +87,13 @@ public class Metric {
     }
 
     public static class InfluxTag {
-        private String name;
-        private String value;
         public InfluxTag(String name, String value) {
             this.setName(name);
             this.setValue(value);
         }
+
+        private String name;
+        private String value;
 
         public String getName() {
             return name;
@@ -116,12 +113,13 @@ public class Metric {
     }
 
     public static class InfluxField {
-        private String name;
-        private TagType type;
         public InfluxField(String name, TagType type) {
             this.setName(name);
             this.setType(type);
         }
+
+        private String name;
+        private TagType type;
 
         public String getName() {
             return name;

@@ -62,7 +62,6 @@ public class TagSync {
     }
 
     void removeTags(Historian historian) {
-        LOGGER.info("Deleted tags for:" + historian.getId());
         repository.deleteTagDetailsByHistorian(historian.getId());
     }
 }

@@ -4,22 +4,29 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class HistorianDTO {
-    @JsonProperty("Name")
-    private final String name;
-    @JsonProperty("Prefix")
-    private final String prefix;
-    @JsonProperty("Provider")
-    private final String provider;
-    @JsonProperty("DataSource")
-    private final String dataSource;
-    @JsonProperty("UserId")
-    private final String userId;
-    @JsonProperty("Password")
-    private final String password;
-    @JsonProperty("Version")
-    private final String version;
     @JsonProperty("DbId")
     private int id;
+
+    @JsonProperty("Name")
+    private final String name;
+
+    @JsonProperty("Prefix")
+    private final String prefix;
+
+    @JsonProperty("Provider")
+    private final String provider;
+
+    @JsonProperty("DataSource")
+    private final String dataSource;
+
+    @JsonProperty("UserId")
+    private final String userId;
+
+    @JsonProperty("Password")
+    private final String password;
+
+    @JsonProperty("Version")
+    private final String version;
 
     @JsonCreator
     public HistorianDTO(
