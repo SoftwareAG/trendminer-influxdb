@@ -84,11 +84,11 @@ $ docker run -p 10027:10027  --network host \
   
 ```
 When connection to postgres fails then you have to add --network=postgres_default.  
-The IP address of the server where the connector runs will be used when you configure the connection in the TrendMiner Config Hub.
+The IP address of the server where the connector runs will be used when you configure the connection in the TrendHub.
 
  ## Configure connector
 
-Use TrendMiner config hub to configure the connector and provide the following values:
+Use TrendMiner TrendHub to configure the connector and provide the following values:
 1. Field `Connector`: hostname and IP of the server where you started the connector, see [Start connector](#start-connector)
 2. Field `Name`: name of the InfluxDB bucket
 3. Field `Prefix`: name of the organization
