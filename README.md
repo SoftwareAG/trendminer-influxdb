@@ -13,6 +13,7 @@ Customers and partners can also implement a custom connection to TrendMiner thro
 1. [Overview and architecture](#overview-and-architecture)
 2. [Prepare project](#prepare-project)
 3. [Start connector](#start-connector)
+4. [Configure connector](#configure-connector)
 
 ## Overview and architecture
 
@@ -82,8 +83,21 @@ $ docker run -p 10027:10027  --network host \
     tm-influx20-connector:latest   
   
 ```
-When connection to postgres fails then you have to add --network=postgres_default 
-		
+When connection to postgres fails then you have to add --network=postgres_default.  
+The IP address of the server where the connector runs will be used when you configure the connection in the TrendMiner Config Hub.
+
+ ## Configure connector
+
+Use TrendMiner config hub to configure the connector and provide the following values:
+1. Field `Connector`: hostname and IP of the server where you started the connector, see [Start connector](#start-connector)
+2. Field `Name`: name of the InfluxDB bucket
+3. Field `Prefix`: name of the organization
+4. Field `Password`: token used to authorize organization
+5. Field `Historian or connector`: hostname and IP of the InfluxDB server  
+
+
+ <img src="doc/configureconnector.png" alt="Overview"  width="100%" height="100%">   
+
 
 [back to content](#content)
 ______________________
