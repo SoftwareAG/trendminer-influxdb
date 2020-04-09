@@ -37,7 +37,7 @@ For Influx 1.7. the REST API and Influx queries are used.
 
 For Influx 2.0. a [Java client library](https://github.com/influxdata/influxdb-client-java) and flux queries are used.  
 
-The connector itself is implementd in Java and uses Spring Boot. The connector stores its configuration data in a PostGres DB. The connection properties have to be provided when starting the connector.
+The connector itself is implementd in Java and uses Spring Boot. The connector stores its configuration data in a PostgreSQL DB. The connection properties have to be provided when starting the connector.
 
 [back to content](#content)
 
@@ -69,7 +69,7 @@ $ mvn package
 
 ## Start connector
 
-In order to start the connector one has to provide connectivity properties for a PostGres instance:
+In order to start the connector one has to provide connectivity properties for a PostgreSQL instance:
 1. DB URL: e.g. jdbc:postgresql://127.0.0.1:5432/tm_influx
 2. Username: e.g. tm_user
 3. Password: e.g. tm_password
@@ -83,7 +83,7 @@ $ docker run -p 10027:10027  --network host \
     tm-influx20-connector:latest   
   
 ```
-When connection to postgres fails then you have to add --network=postgres_default.  
+When connection to PostgreSQL fails then you have to add --network=postgres_default.  
 The IP address of the server where the connector runs will be used when you configure the connection in the TrendHub.
 
  ## Configure connector
